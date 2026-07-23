@@ -10,6 +10,12 @@ export class InitiatePaymentDto {
   @IsOptional() @IsString() remarks?: string;
 }
 
+export class UpdatePaymentDto {
+  @IsOptional() @IsNumber() @IsPositive() amount?: number; // rupees
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(35) custRefNo?: string;
+  @IsOptional() @IsString() @MaxLength(140) remarks?: string;
+}
+
 export class SubmitPaymentDto {
   @IsString() @IsNotEmpty() txnPassword!: string;
   @IsString() @IsNotEmpty() otpRequestId!: string;

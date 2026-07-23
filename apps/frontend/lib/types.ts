@@ -47,4 +47,8 @@ export interface BeneficiaryRow {
   allowIMPS: boolean;
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'DELETED';
   activatedAt: string | null;
+  state: string | null;
+  city: string | null;
+  email: string | null;
+  phone: string | null;
 }

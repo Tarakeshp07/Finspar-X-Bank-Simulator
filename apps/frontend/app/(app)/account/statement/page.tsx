@@ -10,8 +10,10 @@ import { Input } from '@/components/ui/Input';
 import { RiskBadge } from '@/components/ui/Badge';
 import { Table, THead, TBody, TR, TH, TD, EmptyState } from '@/components/ui/Table';
 import { PageHeader } from '@/components/PageHeader';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { formatPaise, formatDateDMY } from '@/lib/format';
+import { formatPaise, formatDateDMY, paiseToRupees } from '@/lib/format';
+import { exportToExcel } from '@/lib/excel';
 import type { AccountBalance, StatementRow } from '@/lib/types';
 
 export default function AccountStatementPage() {
@@ -38,6 +40,33 @@ export default function AccountStatementPage() {
     },
     enabled: applied && !!acc,
   });
+
+  const download = (): void => {
+    if (!data?.length) return void toast.error('Load a statement first');
+    exportToExcel(
+      `statement-${acc}-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { header: 'Date' },
+        { header: 'Description' },
+        { header: 'Reference', text: true },
+        { header: 'Debit (₹)', numeric: true },
+        { header: 'Credit (₹)', numeric: true },
+        { header: 'Balance (₹)', numeric: true },
+        { header: 'Risk' },
+      ],
+      data.map((r) => [
+        formatDateDMY(r.date),
+        r.description,
+        r.refNo ?? '',
+        r.direction === 'DEBIT' ? paiseToRupees(r.amount) : '',
+        r.direction === 'CREDIT' ? paiseToRupees(r.amount) : '',
+        paiseToRupees(r.balanceAfter),
+        r.riskLevel ?? '',
+      ]),
+      `Statement ${acc}`,
+    );
+    toast.success('Statement downloaded');
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -68,7 +97,7 @@ export default function AccountStatementPage() {
           <Button onClick={() => { setApplied(true); refetch(); }}>
             <Search className="h-4 w-4" /> View
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={download} disabled={!data?.length}>
             <Download className="h-4 w-4" /> Download
           </Button>
         </div>

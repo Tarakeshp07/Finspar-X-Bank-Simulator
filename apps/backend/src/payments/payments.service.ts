@@ -6,11 +6,19 @@ import { FraudGateway } from '../fraud/fraud-gateway.service';
 import { LedgerService } from '../ledger/ledger.service';
 import { AuthService } from '../auth/auth.service';
 import { amountInWords } from './amount-in-words';
-import type { InitiatePaymentDto, SubmitPaymentDto } from './dto/payment.dto';
+import type { InitiatePaymentDto, SubmitPaymentDto, UpdatePaymentDto } from './dto/payment.dto';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
 const PER_TXN_LIMIT_PAISE = 2_500_000_00n; // ₹25,00,000
 const EDITABLE: PaymentStatus[] = [PaymentStatus.NEW, PaymentStatus.PENDING_AUTH, PaymentStatus.HELD];
+// Statuses that can still be submitted (final OTP + txn password). CHALLENGED is
+// the state a MEDIUM-risk payment is parked in after confirm() — it must remain
+// completable, so it is submittable even though it is not further editable.
+const SUBMITTABLE: PaymentStatus[] = [
+  PaymentStatus.NEW,
+  PaymentStatus.PENDING_AUTH,
+  PaymentStatus.CHALLENGED,
+];
 
 const RAIL_ALLOW: Record<Rail, (b: { allowIFT: boolean; allowRTGS: boolean; allowNEFT: boolean; allowIMPS: boolean }) => boolean> = {
   IFT: (b) => b.allowIFT,
@@ -171,7 +179,7 @@ export class PaymentsService {
 
   /** Final submit — verify txn password + OTP, then post (or hold by cutoff/limit). */
   async submit(user: JwtPayload, paymentId: string, dto: SubmitPaymentDto) {
-    const payment = await this.ownedEditable(user.customerId, paymentId);
+    const payment = await this.ownedSubmittable(user.customerId, paymentId);
 
     const okPwd = await this.auth.verifyTxnPassword(user.sub, dto.txnPassword);
     if (!okPwd) throw new BadRequestException('Incorrect transaction password');
@@ -249,6 +257,7 @@ export class PaymentsService {
       riskLevel: p.riskLevel,
       beneficiaryName: p.beneficiary.name,
       transactionDate: p.createdAt,
+      remarks: p.remarks,
       editable: EDITABLE.includes(p.status),
     }));
   }
@@ -262,6 +271,41 @@ export class PaymentsService {
     return p;
   }
 
+  async update(user: JwtPayload, paymentId: string, dto: UpdatePaymentDto) {
+    const payment = await this.ownedEditable(user.customerId, paymentId);
+
+    const data: {
+      amount?: bigint;
+      amountInWords?: string;
+      custRefNo?: string;
+      remarks?: string;
+    } = {};
+
+    if (dto.amount !== undefined) {
+      const amount = this.toPaise(dto.amount);
+      if (amount <= 0n) throw new BadRequestException('Amount must be positive');
+      data.amount = amount;
+      data.amountInWords = amountInWords(dto.amount);
+    }
+
+    if (dto.custRefNo !== undefined && dto.custRefNo !== payment.custRefNo) {
+      const dupRef = await this.prisma.payment.findFirst({
+        where: {
+          customerId: user.customerId,
+          custRefNo: dto.custRefNo,
+          NOT: { OR: [{ id: payment.id }, { status: PaymentStatus.DELETED }] },
+        },
+      });
+      if (dupRef) throw new BadRequestException('Customer Reference No already used');
+      data.custRefNo = dto.custRefNo;
+    }
+
+    if (dto.remarks !== undefined) data.remarks = dto.remarks;
+
+    const updated = await this.prisma.payment.update({ where: { id: payment.id }, data });
+    return { id: updated.id, refNo: updated.refNo, amount: updated.amount.toString() };
+  }
+
   async remove(user: JwtPayload, paymentId: string) {
     const payment = await this.ownedEditable(user.customerId, paymentId);
     await this.prisma.payment.update({ where: { id: payment.id }, data: { status: PaymentStatus.DELETED, deletedAt: new Date() } });
@@ -273,6 +317,15 @@ export class PaymentsService {
     if (!payment) throw new NotFoundException('Payment not found');
     if (!EDITABLE.includes(payment.status)) {
       throw new ForbiddenException(`Payment in status ${payment.status} can no longer be modified`);
+    }
+    return payment;
+  }
+
+  private async ownedSubmittable(customerId: string, paymentId: string) {
+    const payment = await this.prisma.payment.findFirst({ where: { id: paymentId, customerId } });
+    if (!payment) throw new NotFoundException('Payment not found');
+    if (!SUBMITTABLE.includes(payment.status)) {
+      throw new ForbiddenException(`Payment in status ${payment.status} can no longer be submitted`);
     }
     return payment;
   }

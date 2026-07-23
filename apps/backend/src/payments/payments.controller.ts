@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { Rail } from '@prisma/client';
 import { PaymentsService } from './payments.service';
-import { InitiatePaymentDto, SubmitPaymentDto } from './dto/payment.dto';
+import { InitiatePaymentDto, SubmitPaymentDto, UpdatePaymentDto } from './dto/payment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt.strategy';
@@ -57,6 +57,11 @@ export class PaymentsController {
   @Post(':id/submit')
   submit(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: SubmitPaymentDto) {
     return this.payments.submit(user, id, dto);
+  }
+
+  @Patch(':id')
+  update(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: UpdatePaymentDto) {
+    return this.payments.update(user, id, dto);
   }
 
   @Delete(':id')

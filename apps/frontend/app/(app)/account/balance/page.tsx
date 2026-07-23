@@ -7,8 +7,10 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Table, THead, TBody, TR, TH, TD, EmptyState } from '@/components/ui/Table';
 import { PageHeader } from '@/components/PageHeader';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { formatPaise } from '@/lib/format';
+import { formatPaise, paiseToRupees } from '@/lib/format';
+import { exportToExcel } from '@/lib/excel';
 import { useAuthStore } from '@/lib/auth-store';
 import type { AccountBalance } from '@/lib/types';
 
@@ -23,6 +25,35 @@ export default function AccountBalancePage() {
     queryFn: async () => (await api.get(`/accounts/balance?accountType=${accountType}`)).data,
   });
 
+  const download = (): void => {
+    if (!data?.length) return void toast.error('No balances to download');
+    exportToExcel(
+      `account-balance-${accountType}-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { header: 'Account Number', text: true },
+        { header: 'Account Name' },
+        { header: 'CCY' },
+        { header: 'Available Bal (₹)', numeric: true },
+        { header: 'Effective Available (₹)', numeric: true },
+        { header: 'Clear Balance (₹)', numeric: true },
+        { header: 'Funds in Clearing (₹)', numeric: true },
+        { header: 'FD Balance (₹)', numeric: true },
+      ],
+      data.map((a) => [
+        a.accountNumber,
+        a.accountName,
+        a.currency,
+        paiseToRupees(a.availableBalance),
+        paiseToRupees(a.effectiveAvailable),
+        paiseToRupees(a.clearBalance),
+        paiseToRupees(a.fundsInClearing),
+        paiseToRupees(a.fdBalance),
+      ]),
+      `Balance ${accountType}`,
+    );
+    toast.success('Balances downloaded');
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader title="Account Balance" description="Balances across your accounts." />
@@ -30,7 +61,7 @@ export default function AccountBalancePage() {
       <Card
         title="Filters"
         actions={
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={download} disabled={!data?.length}>
             <Download className="h-4 w-4" /> Download Balance
           </Button>
         }
