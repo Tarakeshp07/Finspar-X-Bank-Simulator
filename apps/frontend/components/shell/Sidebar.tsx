@@ -36,7 +36,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     >
       <div className="flex h-14 items-center gap-2 border-b border-border px-4 font-semibold text-text">
         <ShieldCheck className="h-6 w-6 shrink-0 text-primary" />
-        {!collapsed && <span>FinSpark</span>}
+        {!collapsed && <span>Bank of Maharashtra</span>}
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">

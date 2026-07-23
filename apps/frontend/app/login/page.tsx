@@ -69,7 +69,7 @@ export default function LoginPage() {
       {/* Left — brand / portal description */}
       <aside className="relative hidden flex-col justify-between bg-primary p-12 text-white lg:flex">
         <div className="flex items-center gap-2 text-xl font-semibold">
-          <ShieldCheck className="h-7 w-7" /> FinSpark
+          <ShieldCheck className="h-7 w-7" /> Bank of Maharashtra
         </div>
         <div className="space-y-4">
           <h1 className="text-3xl font-semibold leading-tight">

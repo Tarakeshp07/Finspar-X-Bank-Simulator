@@ -66,7 +66,7 @@ export default function TransactionPasswordPage() {
         <Card title="Reset via OTP">
           <div className="space-y-4">
             <p className="text-xs text-text-muted">OTP sent to your registered email. Request ID: {reqId}</p>
-            <Input label="OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} />
+            <Input label="OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} hint="Demo OTP: 123456" />
             <p className="text-xs text-text-muted">Enter the new password above, then confirm.</p>
             <Button onClick={resetWithOtp}>Confirm reset</Button>
           </div>

@@ -120,8 +120,11 @@ export class OtpService {
     return { requestId, expiresAt };
   }
 
+  // Mock OTP: a fixed 6-digit code so the flow can be demoed without real email
+  // delivery. Still bcrypt-hashed and stored, so verify/expiry/attempt logic is
+  // unchanged — only the value is deterministic.
   private generateCode(): string {
-    return String(randomInt(0, 1_000_000)).padStart(6, '0');
+    return '123456';
   }
 
   private async uniqueRequestId(): Promise<string> {

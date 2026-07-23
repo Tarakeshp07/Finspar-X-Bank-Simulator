@@ -42,12 +42,12 @@ export class MailerService {
   async sendOtp(to: string, code: string, purposeLabel: string, requestId: string): Promise<void> {
     const html = `
       <div style="font-family:sans-serif">
-        <h2>FinSpark — ${purposeLabel}</h2>
+        <h2>Bank of Maharashtra — ${purposeLabel}</h2>
         <p>Your one-time password is:</p>
         <p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p>
         <p>Valid for ${env.otpTtlSeconds} seconds. Request ID: ${requestId}.</p>
         <p style="color:#64748b">If you did not request this, ignore this email.</p>
       </div>`;
-    await this.send(to, `FinSpark OTP — ${purposeLabel}`, html);
+    await this.send(to, `Bank of Maharashtra OTP — ${purposeLabel}`, html);
   }
 }

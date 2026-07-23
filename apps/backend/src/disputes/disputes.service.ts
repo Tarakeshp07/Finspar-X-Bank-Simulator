@@ -48,7 +48,7 @@ export class DisputesService {
     });
     await this.mailer.send(
       userEmail,
-      'FinSpark — Fraud report received',
+      'Bank of Maharashtra — Fraud report received',
       `<p>Your report (Tracking Ref <strong>${kase.trackingRef}</strong>) is under investigation. Your account has been frozen for protection.</p>`,
     );
     return { trackingRef: kase.trackingRef, status: kase.status, frozen: true };

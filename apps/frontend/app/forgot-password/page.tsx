@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
       ) : (
         <form onSubmit={reset} className="space-y-4">
           <p className="text-xs text-text-muted">OTP sent to your registered email. Request ID: {requestId}</p>
-          <Input label="OTP" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="6-digit code" />
+          <Input label="OTP" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="6-digit code" hint="Demo OTP: 123456" />
           <Input label="New Password" required type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           <div className="flex items-center justify-between">
             <button type="button" onClick={resend} className="text-sm text-accent hover:underline">

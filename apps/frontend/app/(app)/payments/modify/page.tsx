@@ -260,7 +260,7 @@ export default function ModifyPaymentsPage() {
                 )}
               </div>
               <Input label="Transaction Password" type="password" required value={txnPassword} onChange={(e) => setTxnPassword(e.target.value)} />
-              <Input label="OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="6-digit code" />
+              <Input label="OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="6-digit code" hint="Demo OTP: 123456" />
               <p className="text-xs text-text-muted">OTP Request ID: {confirmRes.otpRequestId}</p>
             </>
           )}

@@ -26,7 +26,7 @@ async function bootstrap(): Promise<void> {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('FinSpark Banking Simulator API')
+    .setTitle('Bank of Maharashtra Banking Simulator API')
     .setDescription('Indian corporate internet-banking simulator')
     .setVersion('0.1.0')
     .addBearerAuth()
@@ -36,7 +36,7 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`FinSpark backend listening on http://localhost:${port}/api`);
+  console.log(`Bank of Maharashtra backend listening on http://localhost:${port}/api`);
 }
 
 void bootstrap();

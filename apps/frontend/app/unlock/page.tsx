@@ -64,7 +64,7 @@ export default function UnlockPage() {
       ) : (
         <form onSubmit={verify} className="space-y-4">
           <p className="text-xs text-text-muted">Request ID: {requestId}</p>
-          <Input label="OTP" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="6-digit code" />
+          <Input label="OTP" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="6-digit code" hint="Demo OTP: 123456" />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Unlocking…' : 'Unlock account'}
           </Button>

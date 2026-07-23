@@ -237,7 +237,7 @@ export default function InitiatePaymentsPage() {
             </div>
           )}
           <Input label="Transaction Password" type="password" required value={txnPassword} onChange={(e) => setTxnPassword(e.target.value)} />
-          <Input label="OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="6-digit code" />
+          <Input label="OTP" required value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="6-digit code" hint="Demo OTP: 123456" />
           <div className="flex items-center justify-between text-xs text-text-muted">
             <button onClick={resend} className="text-accent hover:underline">Resend OTP</button>
             <span>OTP Request ID: {confirmRes?.otpRequestId}</span>

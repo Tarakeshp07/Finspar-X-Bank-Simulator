@@ -21,7 +21,7 @@ export function AuthCard({
         <ThemeToggle />
       </div>
       <div className="flex items-center gap-2 text-xl font-semibold text-text">
-        <ShieldCheck className="h-6 w-6 text-primary" /> FinSpark
+        <ShieldCheck className="h-6 w-6 text-primary" /> Bank of Maharashtra
       </div>
       <div className="w-full max-w-md space-y-5 rounded-[var(--radius-card)] border border-border bg-surface p-8 shadow-sm">
         <div className="space-y-1">

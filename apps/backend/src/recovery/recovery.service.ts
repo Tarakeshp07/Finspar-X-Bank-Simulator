@@ -58,7 +58,7 @@ export class RecoveryService {
       const masked = this.maskUserId(match.user.userId);
       await this.mailer.send(
         match.user.email,
-        'FinSpark — Your User Id',
+        'Bank of Maharashtra — Your User Id',
         `<p>Your User Id is <strong>${masked}</strong>.</p>`,
       );
       await this.audit('FORGOT_USER_ID_MATCH', match.userId);
@@ -105,7 +105,7 @@ export class RecoveryService {
     if (user) {
       await this.mailer.send(
         user.email,
-        `FinSpark — ${isTxn ? 'Transaction' : 'Login'} password changed`,
+        `Bank of Maharashtra — ${isTxn ? 'Transaction' : 'Login'} password changed`,
         `<p>Your ${isTxn ? 'transaction' : 'login'} password was changed. If this wasn't you, contact support immediately.</p>`,
       );
     }
@@ -143,7 +143,7 @@ export class RecoveryService {
     if (user) {
       await this.mailer.send(
         user.email,
-        'FinSpark — Account unlocked',
+        'Bank of Maharashtra — Account unlocked',
         `<p>Your account has been unlocked. Note: your password was not changed. If you forgot it, use Forgot Login Password.</p>`,
       );
     }

@@ -11,7 +11,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'FinSpark',
+  title: 'Bank of Maharashtra',
   description: 'Indian corporate internet-banking simulator with fraud detection',
 };
 

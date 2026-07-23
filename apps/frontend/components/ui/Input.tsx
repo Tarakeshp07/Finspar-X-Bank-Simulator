@@ -7,6 +7,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   required?: boolean;
   error?: string;
+  hint?: string;
 }
 
 /**
@@ -14,7 +15,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
  * Required marker is a subtle `*` in muted text, not shouting red. (§11)
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, required, error, id, ...props }, ref) => {
+  ({ className, label, required, error, hint, id, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
     return (
@@ -39,7 +40,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
           {...props}
         />
-        {error && <p className="text-xs text-risk-critical">{error}</p>}
+        {error ? (
+          <p className="text-xs text-risk-critical">{error}</p>
+        ) : (
+          hint && <p className="text-xs text-text-muted">{hint}</p>
+        )}
       </div>
     );
   },
