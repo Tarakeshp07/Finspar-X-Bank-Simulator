@@ -6,8 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Logger } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { FraudGateway } from '../fraud/fraud-gateway.service';
 import { env } from '../common/env';
 import type { LoginDto } from './dto/login.dto';
 import type { JwtPayload } from './jwt.strategy';
@@ -19,9 +21,12 @@ interface LoginContext {
 
 @Injectable()
 export class AuthService {
+  private readonly log = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly fraud: FraudGateway,
   ) {}
 
   async login(dto: LoginDto, ctx: LoginContext) {
@@ -61,7 +66,7 @@ export class AuthService {
       where: { id: user.id },
       data: { failedAttempts: 0, lockedAt: null, lastLoginAt: new Date() },
     });
-    await this.prisma.loginEvent.create({
+    const loginEvent = await this.prisma.loginEvent.create({
       data: {
         userId: user.id,
         customerId: link.customerId,
@@ -71,6 +76,19 @@ export class AuthService {
         success: true,
       },
     });
+
+    // Fraud seam — score the login through the behaviour model. Non-fatal: a
+    // scoring error must never block a legitimate sign-in (fail open).
+    try {
+      const event = this.fraud.buildLoginEvent({
+        userId: user.id,
+        loginEventId: loginEvent.id,
+        ctx: { ip: ctx.ip, userAgent: ctx.userAgent, deviceFingerprint: dto.deviceFingerprint, sessionId: user.id },
+      });
+      await this.fraud.assess(event, { userId: user.id, ip: ctx.ip, deviceFingerprint: dto.deviceFingerprint });
+    } catch (err) {
+      this.log.warn(`Login fraud scoring failed for ${user.userId}: ${String(err)}`);
+    }
 
     const payload: JwtPayload = {
       sub: user.id,

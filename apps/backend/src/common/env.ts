@@ -49,4 +49,22 @@ export const env = {
       return optional('EMAIL_USER_TO', '');
     },
   },
+  // Sentinel Fusion AI — the ML scoring service (Phase 2). When `enabled`, the
+  // HttpScorer replaces the HeuristicScorer behind the SCORER token; on any model
+  // error/timeout it fails open to the heuristic so the money path never hangs.
+  sentinel: {
+    get enabled(): boolean {
+      return optional('SENTINEL_ENABLED', 'false') === 'true';
+    },
+    get url(): string {
+      // Backend runs in Docker: host.docker.internal reaches the model on the host.
+      return optional('SENTINEL_URL', 'http://host.docker.internal:8000');
+    },
+    get apiKey(): string {
+      return optional('SENTINEL_API_KEY', 'sentinel-demo-key-2026');
+    },
+    get timeoutMs(): number {
+      return Number(optional('SENTINEL_TIMEOUT_MS', '800'));
+    },
+  },
 };

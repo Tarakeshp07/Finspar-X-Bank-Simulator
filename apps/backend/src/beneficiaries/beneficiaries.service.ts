@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { createHash } from 'crypto';
 import { BeneficiaryStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SentinelIngest } from '../fraud/sentinel-ingest';
 import type { CreateBeneficiaryDto, UpdateBeneficiaryDto } from './dto/beneficiary.dto';
 
 // A pool of fabricated account-holder names for simulated bank name-resolution.
@@ -20,7 +21,10 @@ const FETCH_NAMES = [
 
 @Injectable()
 export class BeneficiariesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ingest: SentinelIngest,
+  ) {}
 
   async list(
     customerId: string,
@@ -74,7 +78,7 @@ export class BeneficiariesService {
 
     const nameAsFetched = dto.nameAsFetched ?? this.fetchName(dto.accountNumber).nameAsFetched;
 
-    return this.prisma.beneficiary.create({
+    const beneficiary = await this.prisma.beneficiary.create({
       data: {
         customerId,
         code: dto.code,
@@ -98,6 +102,18 @@ export class BeneficiariesService {
         createdBy: actorId,
       },
     });
+
+    // Non-blocking context stream — starts the counterparty ageing clock and
+    // warms the feature store so the first payment isn't scored on cold history.
+    this.ingest.stream({
+      eventId: `ben-add:${beneficiary.id}`,
+      eventType: 'BENEFICIARY_ADD',
+      userId: actorId,
+      timestamp: new Date().toISOString(),
+      isNewBeneficiary: true,
+    });
+
+    return beneficiary;
   }
 
   async update(customerId: string, id: string, dto: UpdateBeneficiaryDto) {
@@ -136,6 +152,15 @@ export class BeneficiariesService {
       where: { id: { in: ids }, customerId, status: BeneficiaryStatus.PENDING },
       data: { status: BeneficiaryStatus.ACTIVE, activatedBy: actorId, activatedAt: new Date() },
     });
+    // Non-blocking context stream for each newly activated payee.
+    for (const id of ids) {
+      this.ingest.stream({
+        eventId: `ben-act:${id}`,
+        eventType: 'BENEFICIARY_ACTIVATE',
+        userId: actorId,
+        timestamp: new Date().toISOString(),
+      });
+    }
     return { activated: result.count };
   }
 

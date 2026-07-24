@@ -14,7 +14,7 @@ export class AccountsController {
 
   @Get('balance')
   balance(@CurrentUser() user: JwtPayload, @Query('accountType') accountType?: 'DEPOSIT' | 'FD') {
-    return this.accounts.balances(user.customerId, accountType);
+    return this.accounts.balances(user.customerId, accountType, user.sub);
   }
 
   @Get('statement')
@@ -25,11 +25,16 @@ export class AccountsController {
     @Query('to') to?: string,
     @Query('order') order?: 'asc' | 'desc',
   ) {
-    return this.accounts.statement(user.customerId, accountNumber, {
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
-      order,
-    });
+    return this.accounts.statement(
+      user.customerId,
+      accountNumber,
+      {
+        from: from ? new Date(from) : undefined,
+        to: to ? new Date(to) : undefined,
+        order,
+      },
+      user.sub,
+    );
   }
 
   @Get('mini-statement')

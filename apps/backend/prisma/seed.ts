@@ -29,6 +29,9 @@ async function main(): Promise<void> {
       customerId: '83840226',
       name: 'Vantage Textiles Pvt Ltd',
       status: 'ACTIVE',
+      // Fabricated profile signals for the Sentinel model (Step 8).
+      customerAge: 42,
+      incomeBand: 0.72,
     },
   });
 

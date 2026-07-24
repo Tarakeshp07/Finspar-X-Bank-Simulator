@@ -1,13 +1,26 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AccountType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SentinelIngest } from '../fraud/sentinel-ingest';
 
 @Injectable()
 export class AccountsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ingest: SentinelIngest,
+  ) {}
 
   /** Account Balance screen (§8.3). Derives available & effective-available. */
-  async balances(customerId: string, accountType?: 'DEPOSIT' | 'FD') {
+  async balances(customerId: string, accountType?: 'DEPOSIT' | 'FD', actorUserId?: string) {
+    if (actorUserId) {
+      // Low-value context event — non-blocking, builds velocity/history.
+      this.ingest.stream({
+        eventId: `bal:${actorUserId}:${Date.now()}`,
+        eventType: 'BALANCE_VIEW',
+        userId: actorUserId,
+        timestamp: new Date().toISOString(),
+      });
+    }
     const where: { customerId: string; accountType?: AccountType | { in: AccountType[] } } = {
       customerId,
     };
@@ -52,8 +65,17 @@ export class AccountsService {
     customerId: string,
     accountNumber: string,
     opts: { from?: Date; to?: Date; order?: 'asc' | 'desc' },
+    actorUserId?: string,
   ) {
     const account = await this.ownedAccount(customerId, accountNumber);
+    if (actorUserId) {
+      this.ingest.stream({
+        eventId: `stmt:${actorUserId}:${Date.now()}`,
+        eventType: 'STATEMENT_VIEW',
+        userId: actorUserId,
+        timestamp: new Date().toISOString(),
+      });
+    }
     const entries = await this.prisma.ledgerEntry.findMany({
       where: {
         accountId: account.id,

@@ -125,6 +125,7 @@ export class PaymentsService {
       userId: user.sub,
       customerId: user.customerId,
       paymentId: payment.id,
+      debitAccountId: payment.debitAccountId,
       amountPaise: payment.amount,
       rail: payment.rail,
       beneficiaryId: payment.beneficiaryId,
@@ -303,6 +304,33 @@ export class PaymentsService {
     if (dto.remarks !== undefined) data.remarks = dto.remarks;
 
     const updated = await this.prisma.payment.update({ where: { id: payment.id }, data });
+
+    // Re-score on the edit path when the amount changed — a modified amount is a
+    // materially different risk. Persist the fresh verdict so the next confirm/
+    // authorize step and the risk badge reflect it.
+    if (data.amount !== undefined) {
+      const beneficiary = await this.prisma.beneficiary.findUnique({ where: { id: updated.beneficiaryId } });
+      const nameMismatch =
+        !!beneficiary?.nameAsFetched && beneficiary.name.toLowerCase() !== beneficiary.nameAsFetched.toLowerCase();
+      const event = await this.gateway.buildPaymentEvent({
+        userId: user.sub,
+        customerId: user.customerId,
+        paymentId: updated.id,
+        debitAccountId: updated.debitAccountId,
+        amountPaise: updated.amount,
+        rail: updated.rail,
+        beneficiaryId: updated.beneficiaryId,
+        nameMismatch,
+        ctx: { sessionId: user.sub },
+        eventType: 'PAYMENT_MODIFY',
+      });
+      const assessment = await this.gateway.assess(event, { userId: user.sub, paymentId: updated.id });
+      await this.prisma.payment.update({
+        where: { id: updated.id },
+        data: { riskScore: assessment.riskScore, riskLevel: assessment.riskLevel, riskReasons: assessment.reasons },
+      });
+    }
+
     return { id: updated.id, refNo: updated.refNo, amount: updated.amount.toString() };
   }
 

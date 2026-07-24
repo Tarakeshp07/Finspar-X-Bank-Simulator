@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../mailer/mailer.service';
+import { SentinelFeedback } from '../fraud/sentinel-feedback';
 import type { ReportFraudDto, GrievanceDto } from './dto/dispute.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class DisputesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
+    private readonly feedback: SentinelFeedback,
   ) {}
 
   private trackingRef(prefix: string): string {
@@ -46,6 +48,11 @@ export class DisputesService {
     await this.prisma.caseNote.create({
       data: { caseId: kase.id, authorId: 'SYSTEM', body: `Reported: ${dto.fraudType} on ${dto.transactionRef}. Account frozen.` },
     });
+    // Close the model's feedback loop — a customer-confirmed fraud is a label=1
+    // outcome on the scored payment. Idempotent per event_id; best-effort.
+    if (linked?.id) {
+      await this.feedback.feedbackForPayment(linked.id, 1);
+    }
     await this.mailer.send(
       userEmail,
       'Bank of Maharashtra — Fraud report received',

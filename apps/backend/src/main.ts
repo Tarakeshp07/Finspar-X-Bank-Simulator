@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 // BigInt is not JSON-serialisable by default. Emit paise as strings so the
@@ -10,7 +11,12 @@ import { AppModule } from './app.module';
 };
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Trust the reverse proxy so req.ip is the real client IP (from X-Forwarded-For),
+  // not the proxy's — required for correct geo-IP country resolution in the fraud
+  // gateway. `1` = trust one proxy hop; raise it if you sit behind more.
+  app.set('trust proxy', 1);
 
   app.setGlobalPrefix('api');
   app.enableCors({

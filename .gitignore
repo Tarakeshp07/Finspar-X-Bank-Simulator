@@ -33,3 +33,7 @@ docker/dockerdata/
 
 # test / coverage
 coverage/
+
+# training export output (generated corpus, can be large)
+exports/
+apps/backend/exports/
