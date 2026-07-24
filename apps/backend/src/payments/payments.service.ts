@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { OtpPurpose, PaymentStatus, Rail, TransferMode } from '@prisma/client';
+import { OtpPurpose, PaymentStatus, Rail, RiskLevel, TransferMode } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OtpService } from '../otp/otp.service';
 import { FraudGateway } from '../fraud/fraud-gateway.service';
@@ -31,6 +31,7 @@ interface Ctx {
   ip?: string;
   userAgent?: string;
   deviceFingerprint?: string;
+  mockCountry?: string; // dev mock-VPN override (X-Mock-Country header)
 }
 
 @Injectable()
@@ -117,6 +118,27 @@ export class PaymentsService {
    */
   async confirm(user: JwtPayload, paymentId: string, ctx: Ctx) {
     const payment = await this.ownedEditable(user.customerId, paymentId);
+
+    // An authorizer already reviewed and released this hold. Skip the fraud
+    // gateway so re-authorising does not re-trigger the same HOLD — go straight
+    // to OTP. The original risk verdict is preserved for the audit trail.
+    if (payment.reviewApproved) {
+      const dbUser = await this.prisma.user.findUnique({ where: { id: user.sub } });
+      const { requestId } = await this.otp.issue({
+        purpose: OtpPurpose.PAYMENT,
+        email: dbUser!.email,
+        userId: user.sub,
+        paymentId: payment.id,
+      });
+      return {
+        outcome: 'OTP' as const,
+        otpRequestId: requestId,
+        riskScore: payment.riskScore ?? 0,
+        riskLevel: payment.riskLevel ?? RiskLevel.LOW,
+        reasons: Array.isArray(payment.riskReasons) ? (payment.riskReasons as string[]) : [],
+      };
+    }
+
     const beneficiary = await this.prisma.beneficiary.findUnique({ where: { id: payment.beneficiaryId } });
     const nameMismatch =
       !!beneficiary?.nameAsFetched && beneficiary.name.toLowerCase() !== beneficiary.nameAsFetched.toLowerCase();
@@ -130,7 +152,7 @@ export class PaymentsService {
       rail: payment.rail,
       beneficiaryId: payment.beneficiaryId,
       nameMismatch,
-      ctx: { ip: ctx.ip, userAgent: ctx.userAgent, deviceFingerprint: ctx.deviceFingerprint, sessionId: user.sub },
+      ctx: { ip: ctx.ip, userAgent: ctx.userAgent, deviceFingerprint: ctx.deviceFingerprint, sessionId: user.sub, mockCountry: ctx.mockCountry },
     });
     const assessment = await this.gateway.assess(event, {
       userId: user.sub,
@@ -327,7 +349,8 @@ export class PaymentsService {
       const assessment = await this.gateway.assess(event, { userId: user.sub, paymentId: updated.id });
       await this.prisma.payment.update({
         where: { id: updated.id },
-        data: { riskScore: assessment.riskScore, riskLevel: assessment.riskLevel, riskReasons: assessment.reasons },
+        // Amount changed -> any prior authorizer approval is stale; re-score applies.
+        data: { riskScore: assessment.riskScore, riskLevel: assessment.riskLevel, riskReasons: assessment.reasons, reviewApproved: false },
       });
     }
 

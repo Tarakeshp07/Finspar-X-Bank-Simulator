@@ -67,4 +67,21 @@ export const env = {
       return Number(optional('SENTINEL_TIMEOUT_MS', '800'));
     },
   },
+  geo: {
+    // DEV ONLY. Browser->localhost traffic is loopback (127.0.0.1), so a VPN is
+    // invisible to req.ip. When true, a private/loopback client IP falls back to
+    // geolocating the machine's PUBLIC egress IP (which DOES go through the VPN),
+    // so local testing reflects your real / VPN country. Never enable in prod —
+    // there the real client IP arrives via X-Forwarded-For.
+    get devUsePublicIp(): boolean {
+      return optional('GEO_DEV_USE_PUBLIC_IP', 'false') === 'true';
+    },
+    // DEV ONLY. Honour an `X-Mock-Country` request header (the login page's mock-
+    // VPN selector) as the client's country, overriding geo-IP. NEVER enable in
+    // prod — trusting a client-supplied country lets an attacker spoof location
+    // to dodge the new-country fraud signal.
+    get allowMockCountry(): boolean {
+      return optional('GEO_ALLOW_MOCK_COUNTRY', 'false') === 'true';
+    },
+  },
 };

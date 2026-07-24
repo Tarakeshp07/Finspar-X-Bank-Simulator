@@ -34,9 +34,17 @@ export class SentinelIngest {
   /** Stream one context event. No-op when the model is disabled. Never throws. */
   stream(event: UnifiedEvent): void {
     if (!env.sentinel.enabled) return;
-    this.http.post('/ingest', toEventIn(event)).catch((err: unknown) => {
-      const msg = axios.isAxiosError(err) ? (err.code ?? err.message) : String(err);
-      this.log.warn(`Sentinel /ingest failed for ${event.eventId ?? event.eventType}: ${msg}`);
-    });
+    this.http
+      .post('/ingest', toEventIn(event))
+      .then((res) => {
+        console.log(
+          `[Sentinel /ingest] ${event.eventType} (${event.eventId ?? 'no-id'}) ` +
+            `country=${event.country ?? 'unknown'} -> ${JSON.stringify(res.data)}`,
+        );
+      })
+      .catch((err: unknown) => {
+        const msg = axios.isAxiosError(err) ? (err.code ?? err.message) : String(err);
+        this.log.warn(`Sentinel /ingest failed for ${event.eventId ?? event.eventType}: ${msg}`);
+      });
   }
 }

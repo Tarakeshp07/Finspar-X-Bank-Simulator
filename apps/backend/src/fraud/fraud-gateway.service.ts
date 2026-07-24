@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { RiskLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SCORER, type Scorer, type UnifiedEvent, type RiskVerdict } from './scorer.interface';
-import { geoFromIp } from './geoip';
+import { resolveGeo } from './geoip';
 
 export type Decision = 'EXECUTE' | 'CHALLENGE' | 'HOLD' | 'BLOCK';
 
@@ -15,6 +15,7 @@ interface RequestContext {
   userAgent?: string;
   deviceFingerprint?: string;
   sessionId?: string;
+  mockCountry?: string; // dev mock-VPN override (X-Mock-Country header)
 }
 
 /**
@@ -75,7 +76,7 @@ export class FraudGateway {
     loginEventId: string;
     ctx: RequestContext;
   }): UnifiedEvent {
-    const geo = geoFromIp(params.ctx.ip);
+    const geo = resolveGeo(params.ctx.ip, params.ctx.mockCountry);
     return {
       eventId: `login:${params.loginEventId}`,
       eventType: 'LOGIN',
@@ -146,7 +147,7 @@ export class FraudGateway {
     }
 
     const accountAgeSeconds = customer ? (Date.now() - customer.createdAt.getTime()) / 1000 : undefined;
-    const geo = geoFromIp(params.ctx.ip);
+    const geo = resolveGeo(params.ctx.ip, params.ctx.mockCountry);
 
     const eventType = params.eventType ?? 'PAYMENT_INITIATE';
     // Stable idempotency key, reused on retries so the model's velocity counters

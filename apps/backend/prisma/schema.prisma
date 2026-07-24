@@ -269,6 +269,9 @@ model Payment {
   riskScore   Float?
   riskLevel   RiskLevel?
   riskReasons Json?
+  // An authorizer released this held payment after review — re-authorising skips
+  // the fraud gateway so it isn't re-held. Reset if the amount is later changed.
+  reviewApproved Boolean @default(false)
 
   initiatedBy  String?
   authorizedBy String? // reserved — unused in single-operator flow

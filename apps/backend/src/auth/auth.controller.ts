@@ -18,6 +18,7 @@ export class AuthController {
     return this.auth.login(dto, {
       ip: req.ip,
       userAgent: req.headers['user-agent'],
+      mockCountry: req.headers['x-mock-country'] as string | undefined,
     });
   }
 

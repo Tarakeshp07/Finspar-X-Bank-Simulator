@@ -12,6 +12,10 @@ api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('finspark-token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+    // Mock-VPN: forward the chosen country so the fraud gateway scores the login
+    // /payment as if it came from there (dev only; backend gates on a flag).
+    const mockCountry = localStorage.getItem('mock-country');
+    if (mockCountry) config.headers['X-Mock-Country'] = mockCountry;
   }
   return config;
 });

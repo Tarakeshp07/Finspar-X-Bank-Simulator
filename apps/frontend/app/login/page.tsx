@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -23,6 +23,23 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+// Mock-VPN country selector (dev). Sent as X-Mock-Country so the fraud gateway
+// scores the login as if it originated there — lets you test the new-country
+// signal without a real VPN.
+const MOCK_COUNTRIES: { code: string; label: string }[] = [
+  { code: '', label: 'Auto (real location)' },
+  { code: 'IN', label: '🇮🇳 India' },
+  { code: 'US', label: '🇺🇸 United States' },
+  { code: 'GB', label: '🇬🇧 United Kingdom' },
+  { code: 'NL', label: '🇳🇱 Netherlands' },
+  { code: 'SG', label: '🇸🇬 Singapore' },
+  { code: 'AE', label: '🇦🇪 UAE' },
+  { code: 'AU', label: '🇦🇺 Australia' },
+  { code: 'DE', label: '🇩🇪 Germany' },
+  { code: 'JP', label: '🇯🇵 Japan' },
+  { code: 'RU', label: '🇷🇺 Russia' },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
@@ -31,7 +48,17 @@ export default function LoginPage() {
   const [captchaCode, setCaptchaCode] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [mockCountry, setMockCountry] = useState('');
   const captchaRef = useRef('');
+
+  // Persist the mock-VPN choice so the api interceptor sends it on every request.
+  const onMockCountryChange = (code: string): void => {
+    setMockCountry(code);
+    if (typeof window !== 'undefined') {
+      if (code) localStorage.setItem('mock-country', code);
+      else localStorage.removeItem('mock-country');
+    }
+  };
 
   const {
     register,
@@ -42,6 +69,12 @@ export default function LoginPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const password = watch('password') ?? '';
+
+  // Restore any previously chosen mock-VPN country.
+  useEffect(() => {
+    const saved = localStorage.getItem('mock-country');
+    if (saved) setMockCountry(saved);
+  }, []);
 
   const onSubmit = async (values: FormValues): Promise<void> => {
     if (captchaInput.trim().toUpperCase() !== captchaRef.current) {
@@ -156,6 +189,27 @@ export default function LoginPage() {
               aria-label="CAPTCHA answer"
             />
             <span className="sr-only">{captchaCode}</span>
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="mock-country" className="text-sm font-medium text-text">
+              Mock VPN location <span className="text-text-muted">(demo)</span>
+            </label>
+            <select
+              id="mock-country"
+              value={mockCountry}
+              onChange={(e) => onMockCountryChange(e.target.value)}
+              className="w-full rounded-[var(--radius-input)] border border-border bg-bg px-3 py-2 text-sm text-text focus:border-accent focus:outline-none"
+            >
+              {MOCK_COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-text-muted">
+              Simulates the login originating from this country for fraud scoring.
+            </p>
           </div>
 
           <Button type="submit" className="w-full" disabled={submitting}>

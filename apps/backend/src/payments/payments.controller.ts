@@ -20,6 +20,7 @@ export class PaymentsController {
       ip: req.ip,
       userAgent: req.headers['user-agent'],
       deviceFingerprint: (req.headers['x-device-fingerprint'] as string) ?? undefined,
+      mockCountry: (req.headers['x-mock-country'] as string) ?? undefined,
     };
   }
 

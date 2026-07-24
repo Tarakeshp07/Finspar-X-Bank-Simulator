@@ -35,8 +35,8 @@ export class SentinelFeedback {
   private async send(eventId: string, userId: string, label: 0 | 1): Promise<void> {
     if (!env.sentinel.enabled) return;
     try {
-      await this.http.post('/feedback', { event_id: eventId, user_id: userId, label });
-      this.log.log(`Feedback sent: ${eventId} label=${label}`);
+      const { data } = await this.http.post('/feedback', { event_id: eventId, user_id: userId, label });
+      console.log(`[Sentinel /feedback] ${eventId} label=${label} -> ${JSON.stringify(data)}`);
     } catch (err) {
       const msg = axios.isAxiosError(err) ? (err.code ?? err.message) : String(err);
       this.log.warn(`Sentinel /feedback failed for ${eventId}: ${msg}`);

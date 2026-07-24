@@ -17,6 +17,7 @@ import type { JwtPayload } from './jwt.strategy';
 interface LoginContext {
   ip?: string;
   userAgent?: string;
+  mockCountry?: string; // dev mock-VPN override (X-Mock-Country header)
 }
 
 @Injectable()
@@ -83,7 +84,13 @@ export class AuthService {
       const event = this.fraud.buildLoginEvent({
         userId: user.id,
         loginEventId: loginEvent.id,
-        ctx: { ip: ctx.ip, userAgent: ctx.userAgent, deviceFingerprint: dto.deviceFingerprint, sessionId: user.id },
+        ctx: {
+          ip: ctx.ip,
+          userAgent: ctx.userAgent,
+          deviceFingerprint: dto.deviceFingerprint,
+          sessionId: user.id,
+          mockCountry: ctx.mockCountry,
+        },
       });
       await this.fraud.assess(event, { userId: user.id, ip: ctx.ip, deviceFingerprint: dto.deviceFingerprint });
     } catch (err) {

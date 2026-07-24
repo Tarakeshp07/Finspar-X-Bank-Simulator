@@ -40,7 +40,8 @@ export class HttpScorer implements Scorer {
 
       // Full model response, for visibility in the backend console.
       console.log(
-        `\n[Sentinel /score] ${event.eventType} (${event.eventId ?? 'no-id'}) ->\n` +
+        `\n[Sentinel /score] ${event.eventType} (${event.eventId ?? 'no-id'}) ` +
+          `country=${event.country ?? 'unknown'} ->\n` +
           JSON.stringify(data, null, 2),
       );
 

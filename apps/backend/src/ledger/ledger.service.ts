@@ -94,6 +94,27 @@ export class LedgerService {
   }
 
   /**
+   * Release a fraud hold: return the reserved funds to the account and set the
+   * payment to `newStatus`. Used by the analyst release/reject flow — release
+   * sends it back to the maker (NEW) to re-authorise; reject cancels it.
+   */
+  async releaseHold(paymentId: string, newStatus: PaymentStatus): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({ where: { id: paymentId } });
+      if (!payment) throw new BadRequestException('Payment not found');
+      if (payment.status !== PaymentStatus.HELD) {
+        throw new BadRequestException('Only a HELD payment can be released');
+      }
+      await tx.account.update({
+        where: { id: payment.debitAccountId },
+        data: { holdAmount: { decrement: payment.amount } },
+      });
+      await tx.payment.update({ where: { id: paymentId }, data: { status: newStatus } });
+    });
+    this.logger.log(`Released hold on ${paymentId} -> ${newStatus}`);
+  }
+
+  /**
    * NEFT/RTGS cut-off job. Runs on weekdays at 19:30; releases HELD-by-cutoff
    * payments (valueDate reached) into the ledger. Fraud holds are left untouched
    * (they have a riskLevel of HIGH/CRITICAL).
